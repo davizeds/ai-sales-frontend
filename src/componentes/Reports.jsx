@@ -1,19 +1,95 @@
+import { useEffect, useState } from "react"
+import {
+  DollarSign,
+  Star,
+  ClipboardCheck,
+  RefreshCw,
+  BarChart3,
+  Lightbulb,
+  TrendingUp,
+} from "lucide-react"
+
+import { api } from "../services/api"
+
 export default function Reports() {
+  const [totalSold, setTotalSold] = useState(0)
+  const [topProduct, setTopProduct] = useState("-")
+  const [topProductQuantity, setTopProductQuantity] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        const [totalResponse, topProductResponse] = await Promise.all([
+          api.getTotalSold(),
+          api.getTopProduct(),
+        ])
+
+        setTotalSold(getTotalSoldValue(totalResponse))
+
+        const bestProduct = getTopProductValue(topProductResponse)
+        setTopProduct(bestProduct.name)
+        setTopProductQuantity(bestProduct.quantity)
+      } catch {
+        setTotalSold(0)
+        setTopProduct("-")
+        setTopProductQuantity(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadReports()
+  }, [])
+
+  function getTotalSoldValue(data) {
+    return data.total_vendido || data.total || data.valor_total || 0
+  }
+
+  function getTopProductValue(data) {
+    return {
+      name:
+        data.produto ||
+        data.nome ||
+        data.mais_vendido ||
+        data.produto_mais_vendido ||
+        data.resposta ||
+        "-",
+      quantity:
+        data.quantidade ||
+        data.total_quantidade ||
+        data.quantidade_vendida ||
+        null,
+    }
+  }
+
+  function formatCurrency(value) {
+    return Number(value).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    })
+  }
+
   const reports = [
     {
       title: "Total vendido",
-      value: "R$ 0,00",
+      value: loading ? "Carregando..." : formatCurrency(totalSold),
       description: "Soma total dos pedidos registrados.",
+      icon: DollarSign,
     },
     {
       title: "Produto mais vendido",
-      value: "-",
-      description: "Produto com maior quantidade vendida.",
+      value: loading ? "Carregando..." : topProduct,
+      description: topProductQuantity
+        ? `${topProductQuantity} unidades vendidas.`
+        : "Produto com maior quantidade vendida.",
+      icon: Star,
     },
     {
       title: "Pedidos concluídos",
       value: "0",
       description: "Quantidade de pedidos finalizados.",
+      icon: ClipboardCheck,
     },
   ]
 
@@ -33,25 +109,38 @@ export default function Reports() {
         </div>
 
         <button className="dashboard-action">
+          <RefreshCw size={17} />
           Atualizar relatórios
         </button>
       </div>
 
       <div className="reports-grid">
-        {reports.map((report) => (
-          <article className="report-card" key={report.title}>
-            <span>{report.title}</span>
-            <strong>{report.value}</strong>
-            <p>{report.description}</p>
-          </article>
-        ))}
+        {reports.map((report) => {
+          const Icon = report.icon
+
+          return (
+            <article className="report-card" key={report.title}>
+              <div className="report-icon">
+                <Icon size={20} />
+              </div>
+
+              <span>{report.title}</span>
+              <strong>{report.value}</strong>
+              <p>{report.description}</p>
+            </article>
+          )
+        })}
       </div>
 
       <div className="reports-bottom">
         <div className="panel">
-          <h2>Resumo dos dados</h2>
+          <h2>
+            <BarChart3 size={22} />
+            Resumo dos dados
+          </h2>
+
           <p>
-            Os relatórios serão alimentados diretamente pelo backend,
+            Os relatórios são alimentados diretamente pelo backend,
             permitindo acompanhar vendas, produtos e desempenho geral.
           </p>
 
@@ -59,33 +148,36 @@ export default function Reports() {
             <div>
               <span>Vendas</span>
               <div className="progress-bar">
-                <div style={{ width: "72%" }}></div>
+                <div style={{ width: totalSold > 0 ? "72%" : "8%" }}></div>
               </div>
             </div>
 
             <div>
               <span>Produtos</span>
               <div className="progress-bar">
-                <div style={{ width: "54%" }}></div>
+                <div style={{ width: topProduct !== "-" ? "54%" : "8%" }}></div>
               </div>
             </div>
 
             <div>
               <span>Pedidos</span>
               <div className="progress-bar">
-                <div style={{ width: "86%" }}></div>
+                <div style={{ width: "8%" }}></div>
               </div>
             </div>
           </div>
         </div>
 
         <div className="panel">
-          <h2>Insights</h2>
+          <h2>
+            <Lightbulb size={22} />
+            Insights
+          </h2>
 
           <div className="insights-list">
             {insights.map((item) => (
               <div className="insight-item" key={item}>
-                <span>•</span>
+                <TrendingUp size={20} />
                 <p>{item}</p>
               </div>
             ))}

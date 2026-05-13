@@ -1,20 +1,81 @@
-export default function AiAssistant() {
-  const suggestions = [
-    "Qual produto vendeu mais?",
-    "Quanto vendi no total?",
-    "Quais produtos estão com estoque baixo?",
-  ]
+import { useState } from "react"
+import {
+  Send,
+  Sparkles,
+  Lightbulb,
+  Settings,
+  Database,
+  Server,
+  Brain,
+  MessageCircle,
+  ArrowRight,
+} from "lucide-react"
 
-  const messages = [
-    {
-      type: "user",
-      text: "Qual produto vendeu mais?",
-    },
+import { api } from "../services/api"
+
+export default function AiAssistant() {
+  const [question, setQuestion] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [messages, setMessages] = useState([
     {
       type: "ai",
-      text: "O produto mais vendido será exibido aqui com base nos dados reais do backend.",
+      text: "Olá! Posso responder perguntas sobre vendas, produtos, pedidos e relatórios do sistema.",
     },
+  ])
+
+  const suggestions = [
+    "Qual produto mais vendido?",
+    "Quanto vendi no total?",
+    "Quais produtos estão cadastrados?",
   ]
+
+  async function handleAsk(customQuestion) {
+    const currentQuestion = customQuestion || question
+
+    if (!currentQuestion.trim()) {
+      return
+    }
+
+    const userMessage = {
+      type: "user",
+      text: currentQuestion,
+    }
+
+    setMessages((currentMessages) => [...currentMessages, userMessage])
+    setQuestion("")
+    setLoading(true)
+
+    try {
+      const response = await api.askAI(currentQuestion)
+
+      const answer =
+        response.resposta ||
+        response.mensagem ||
+        response.message ||
+        "A IA respondeu, mas não encontrei o campo de resposta esperado."
+
+      const aiMessage = {
+        type: "ai",
+        text: answer,
+      }
+
+      setMessages((currentMessages) => [...currentMessages, aiMessage])
+    } catch {
+      const errorMessage = {
+        type: "ai",
+        text: "Não consegui conectar com a IA no backend agora.",
+      }
+
+      setMessages((currentMessages) => [...currentMessages, errorMessage])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    handleAsk()
+  }
 
   return (
     <section className="page ai-page">
@@ -25,7 +86,18 @@ export default function AiAssistant() {
           <p>Faça perguntas sobre vendas, produtos, pedidos e relatórios.</p>
         </div>
 
-        <button className="dashboard-action">
+        <button
+          className="dashboard-action"
+          onClick={() =>
+            setMessages([
+              {
+                type: "ai",
+                text: "Nova conversa iniciada. Faça uma pergunta sobre o sistema.",
+              },
+            ])
+          }
+        >
+          <MessageCircle size={17} />
           Nova conversa
         </button>
       </div>
@@ -34,7 +106,10 @@ export default function AiAssistant() {
         <div className="ai-chat-panel">
           <div className="chat-header">
             <div>
-              <h2>Chat inteligente</h2>
+              <h2>
+                <Sparkles size={22} />
+                Chat inteligente
+              </h2>
               <p>Conectado aos dados do sistema.</p>
             </div>
 
@@ -55,37 +130,83 @@ export default function AiAssistant() {
                 <p>{message.text}</p>
               </div>
             ))}
+
+            {loading && (
+              <div className="chat-message ai-message">
+                <span>AI Sales</span>
+                <p>Consultando backend...</p>
+              </div>
+            )}
           </div>
 
-          <div className="chat-input-area">
-            <div className="chat-input">
-              Digite sua pergunta sobre o sistema...
-            </div>
+          <form className="chat-input-area" onSubmit={handleSubmit}>
+            <input
+              className="chat-input"
+              type="text"
+              placeholder="Digite sua pergunta sobre o sistema..."
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+            />
 
-            <button className="primary-button">
+            <button className="primary-button" type="submit" disabled={loading}>
+              <Send size={17} />
               Perguntar
             </button>
-          </div>
+          </form>
         </div>
 
         <div className="ai-side-panel">
-          <h2>Perguntas sugeridas</h2>
+          <h2>
+            <Lightbulb size={22} />
+            Perguntas sugeridas
+          </h2>
+
           <p>Use exemplos rápidos para consultar os dados do negócio.</p>
 
           <div className="suggestions-list">
             {suggestions.map((suggestion) => (
-              <button key={suggestion}>
+              <button
+                key={suggestion}
+                onClick={() => handleAsk(suggestion)}
+                disabled={loading}
+              >
                 {suggestion}
+                <ArrowRight size={17} />
               </button>
             ))}
           </div>
 
           <div className="ai-info-card">
-            <span>Como funciona</span>
+            <span>
+              <Settings size={18} />
+              Como funciona
+            </span>
+
             <p>
-              O backend consulta os dados reais do sistema e envia contexto
-              para a IA responder de forma natural.
+              O frontend envia a pergunta para o backend. O backend consulta os
+              dados do sistema e retorna uma resposta para o chat.
             </p>
+
+            <div className="ai-flow">
+              <div>
+                <Database size={22} />
+                <small>Dados</small>
+              </div>
+
+              <ArrowRight size={16} />
+
+              <div>
+                <Server size={22} />
+                <small>API</small>
+              </div>
+
+              <ArrowRight size={16} />
+
+              <div>
+                <Brain size={22} />
+                <small>IA</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
